@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Deskrawl DPS">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Deskrawl Sorcerer DPS</title>
+<style>
+:root{--bg:#0f1117;--card:#171b24;--card2:#202633;--text:#eef2f8;--muted:#9da8ba;--line:#2d3544;--accent:#8aa2ff;--good:#64d98b;--bad:#ff7d88}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:rgba(15,17,23,.96);backdrop-filter:blur(12px);padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0 0 10px}.summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:10px}.metric b{display:block;font-size:13px;color:var(--muted)}.metric strong{font-size:17px}
+#verdict{margin-top:8px;font-size:13px;color:var(--accent)}
+main{padding:12px 12px 90px;max-width:760px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 12px}label{font-size:12px;color:var(--muted);display:block;margin:8px 0 4px}
+input,select{width:100%;font-size:16px;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.skill{display:grid;grid-template-columns:auto 1fr 72px;gap:9px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.skill:last-child{border:0}.skill input[type=checkbox]{width:22px;height:22px}
+button{border:0;border-radius:12px;padding:12px 14px;font-weight:700;font-size:15px;background:var(--accent);color:#0d1220}.secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.result{font-variant-numeric:tabular-nums}.ocrrow{display:grid;grid-template-columns:28px 1fr 90px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.ocrrow input[type=checkbox]{width:22px;height:22px}.ocrrow input[type=number]{padding:8px}details{border-top:1px solid var(--line);padding:10px 0}summary{cursor:pointer;color:var(--accent);font-size:14px}.pos{color:var(--good)}.neg{color:var(--bad)}
+small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:#12151d;border-top:1px solid var(--line);padding:8px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));z-index:10}
+.tabs button{flex:1;background:transparent;color:var(--muted);font-size:12px;padding:8px 3px}.tabs button.active{color:var(--accent)}
+.page{display:none}.page.active{display:block}@media(max-width:420px){.grid3{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>Deskrawl • Sorcerer DPS Lab <small>Mobile v1.1</small></h1>
+<div class="summary">
+ <div class="metric"><b>BOSS</b><strong id="boss">—</strong></div>
+ <div class="metric"><b>周回</b><strong id="farm">—</strong></div>
+</div>
+<div id="verdict">入力すると候補装備との差を表示します</div>
+</header>
+<main>
+<section id="p-build" class="page">
+ <div class="card"><h2>キャラクター基礎値</h2>
+  <div class="grid2">
+   <div><label>Weapon Damage</label><input id="wd" type="number" value="100"></div>
+   <div><label>Attack Speed / sec</label><input id="as" type="number" step=".01" value="1"></div>
+   <div><label>Intelligence</label><input id="int" type="number" value="10"></div>
+   <div><label>Crit Chance %</label><input id="cc" type="number" value="5"></div>
+   <div><label>Crit Damage %</label><input id="cd" type="number" value="150"></div>
+   <div><label>Cooldown Reduction %</label><input id="cdr" type="number" value="0"></div><div><label>Max Mana</label><input id="mana" type="number" value="100"></div>
+  </div>
+ </div>
+ <div class="card"><h2>現在装備の攻撃補正</h2><div id="currentStats"></div></div>
+ <div class="card"><h2>交換候補の差分</h2>
+  <small>候補装備に交換した時に増減する数値だけ入力します。例：Fire +20 → +35なら「15」。</small>
+  <div id="deltaStats"></div>
+ </div>
+</section>
+
+
+<section id="p-equipment" class="page active">
+<div class="card"><h2>現在装備 12部位</h2><label>部位</label><select id="slot" onchange="loadSlot()"></select><label>装備名</label><input id="iname">
+<label>Rune Set</label><select id="iset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+<div class="grid2"><div><label>Gem</label><select id="igem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="igt" type="number" min="1" max="6" value="1"></div></div>
+<label>Unique</label><select id="iunique"></select><h2 style="margin-top:16px">Affix ×5</h2><div id="iaff"></div>
+<div class="actions" style="margin-top:12px"><button onclick="saveSlot()">この部位を登録</button><button class="secondary" onclick="clearSlot()">クリア</button></div></div>
+<div class="card"><h2>拾った交換候補</h2><label>交換部位</label><select id="cslot" onchange="calc()"></select><label>装備名</label><input id="cname">
+<label>Rune Set</label><select id="cset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+<div class="grid2"><div><label>Gem</label><select id="cgem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="cgt" type="number" min="1" max="6" value="1"></div></div>
+<label>Unique</label><select id="cunique"></select><h2 style="margin-top:16px">Affix ×5</h2>
+<div class="actions"><button class="secondary" onclick="presetCandidate('lightning')">Lightning系</button><button class="secondary" onclick="presetCandidate('crit')">Crit系</button></div>
+<div id="caff"></div>
+<div class="actions" style="margin-top:10px"><button class="secondary" onclick="copyCurrentToCandidate()">現在装備をコピー</button><button class="secondary" onclick="clearCandidate()">候補をクリア</button></div>
+<small>候補を入力すると指定部位と自動差し替えします。</small></div>
+<div class="card"><h2>スクショ入力アシスト</h2>
+<input id="shot" type="file" accept="image/*" onchange="showShot(event)">
+<div id="shotWrap" style="display:none;margin-top:10px">
+ <img id="shotImg" alt="equipment screenshot" style="width:100%;max-height:52vh;object-fit:contain;background:#090b10;border-radius:12px;border:1px solid var(--line)">
+ <div class="grid2" style="margin-top:8px">
+  <button class="secondary" onclick="zoomShot(1.25)">拡大</button><button class="secondary" onclick="zoomShot(.8)">縮小</button>
+ </div>
+ <button class="secondary" style="width:100%;margin-top:8px" onclick="clearShot()">画像を閉じる</button>
+ <small style="margin-top:8px">画像は端末内で表示するだけで、サーバーへ送信しません。</small>
+ <button id="ocrBtn" style="width:100%;margin-top:10px" onclick="tryNativeOCR()">端末OCRを試す</button>
+ <label>OCR / 認識テキスト</label>
+ <textarea id="ocrText" rows="7" placeholder="例：&#10;Critical Hit Chance +8%&#10;Lightning Damage +35%&#10;Intelligence +29" style="width:100%;font-size:16px;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px"></textarea>
+ <button class="secondary" style="width:100%;margin-top:8px" onclick="parseOCR()">テキストを解析</button>
+ <div id="ocrStatus"><small>OCR結果は自動確定しません。解析後に内容を確認してください。</small></div>
+ <div id="ocrCandidates"></div>
+</div></div>
+<div class="card"><h2>候補クイック比較</h2><div id="gearQuick"><small>候補装備を入力するとここに差分を表示します。</small></div>
+<button style="width:100%;margin-top:8px" onclick="tab('result',document.querySelectorAll('.tabs button')[5])">詳細比較を見る</button></div>
+<div class="card"><h2>現在装備一覧</h2><div id="gearList"></div></div></section>
+<section id="p-skills" class="page">
+ <div class="card"><h2>Ability Loadout</h2><small>Basic 1 / Strong 1 / Special 最大2を選択。</small><div id="skills"></div></div>
+</section>
+
+<section id="p-combat" class="page">
+ <div class="card"><h2>戦闘条件</h2>
+  <div class="grid2">
+   <div><label>周回時の敵数</label><input id="enemies" type="number" min="2" max="20" value="5"></div>
+   <div><label>Vulnerable</label><select id="vuln"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Arcane Exposure Vulnerable uptime %</label><input id="aeVulnUp" type="number" min="0" max="100" value="0"></div>
+   <div><label>Burned</label><select id="burned"><option value="0">OFF</option><option value="1">ON</option></select></div>
+   <div><label>Slowed</label><select id="slowed"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Frozen</label><select id="frozen"><option value="0">OFF</option><option value="1">ON</option></select></div>
+<div><label>Elite</label><select id="elite"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Healthy target</label><select id="healthy"><option value="0">OFF</option><option value="1">ON</option></select></div>
+<div><label>Injured target</label><select id="injured"><option value="0">OFF</option><option value="1">ON</option></select></div>
+<div><label>Distant target</label><select id="distant"><option value="0">OFF</option><option value="1">ON</option></select></div>
+<div><label>Electrostatic stacks</label><input id="electro" type="number" min="0" max="20" value="0"></div>
+<div><label>Flame Aura uptime</label><select id="auraAuto"><option value="1">自動平均</option><option value="0">無視</option></select></div>
+  </div>
+ </div>
+ <div class="card"><h2>未公開cadenceの実測補助</h2>
+<small>公開情報でtick/攻撃間隔が欠ける能力だけ、実測値を入れるとDPSへ反映します。0なら除外。</small>
+<label>Ice Meteor ticks / cast</label><input id="iceMeteorTicks" type="number" step=".1" value="0">
+<label>Frost Beam ticks / 3s channel</label><input id="frostBeamTicks" type="number" step=".1" value="0">
+<label>Fire Elemental attacks / summon</label><input id="fireElemAttacks" type="number" step=".1" value="0">
+</div><div class="card"><h2>Multi-target補正</h2>
+  <label>Frozen Barrage 6pc 追加3発の実効命中率 %</label><input id="fb6hit" type="number" min="0" max="100" value="0">
+<label>Stormcaller 4pc Splash: 追加target equivalents</label><input id="sc4extra" type="number" step=".1" min="0" value="0">
+<label>Stormcaller 6pc Lightning Ball 実測DPS/target</label><input id="sc6dps" type="number" step=".1" min="0" value="0">
+<label>Ring of Fourth Flame: Pyroblast / Fire Ball damage倍率</label><input id="pyroMult" type="number" step=".01" min="0" value="0">
+<small>倍率が0なら未計算。Every 4th Fire Ball becomes Pyroblastという発動条件のみ確定。</small>
+<label>周回: Burn敵 kill / sec</label><input id="burnKills" type="number" step=".1" min="0" value="0">
+<small>Combustion選択時、Burn敵撃破の50%で100% weapon damage爆発を期待値計算します。</small>
+<label>追加対象へ与える実効DPS（現在装備）</label><input id="aoe" type="number" value="0">
+  <label>候補装備での増減</label><input id="aoed" type="number" value="0">
+  <small>係数未確認のLegendary/Set効果を推測で入れないため、実測できるAoE分はここへ入力できます。</small>
+ </div>
+</section>
+
+
+<section id="p-advanced" class="page">
+ <div class="card"><h2>Paragon</h2>
+  <div class="grid2">
+   <div><label>INT points</label><input id="p_int" type="number" min="0" value="0"></div>
+   <div><label>Crit Chance points</label><input id="p_cc" type="number" min="0" max="50" value="0"></div>
+   <div><label>Crit Damage points</label><input id="p_cd" type="number" min="0" max="50" value="0"></div>
+   <div><label>Attack Speed points</label><input id="p_as" type="number" min="0" max="50" value="0"></div>
+   <div><label>CDR points</label><input id="p_cdr" type="number" min="0" max="50" value="0"></div>
+  </div>
+ </div>
+ <div class="card"><h2>Rune Set</h2>
+  <label>Set</label><select id="rset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+  <label>装備数</label><input id="rpieces" type="number" min="0" max="6" value="0">
+  <small>2pcの確定攻撃補正を自動反映。4/6pcの係数未確定部分は推測で加算しません。</small>
+ </div>
+ <div class="card"><h2>Gems</h2>
+  <div class="grid2">
+   <div><label>Weapon Gem</label><select id="wgem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option></select></div>
+   <div><label>Tier</label><input id="wgt" type="number" min="1" max="6" value="1"></div>
+   <div><label>Armor Amethyst 数</label><input id="gam" type="number" min="0" max="3" value="0"></div>
+   <div><label>Armor Diamond 数</label><input id="gdi" type="number" min="0" max="3" value="0"></div>
+   <div><label>Armor Gem Tier</label><input id="gat" type="number" min="1" max="6" value="1"></div>
+  </div>
+ </div>
+ <div class="card"><h2>Sorcerer Talent Tree — 41</h2>
+  <div id="talents"></div>
+  <small>全41 Talentを収録。0/5/10/15/20/30/40/50/60pt段の解放条件と、10/30/60pt Capstoneの排他を自動チェックします。防御・Mana・CC系などDPSへ直接影響しないTalentもビルド保存対象です。</small>
+ </div>
+ <div class="card"><h2>Legendary / Unique</h2>
+  <label>装備効果</label><select id="unique"><option>None</option><option>Stormcaller Gauntlets</option><option>Festering Gauntlets</option><option>Hellstorm Mace</option><option>Staff of the Frostwyrm</option><option>Ring of the Fourth Flame</option><option>Stormguard Necklace</option></select>
+  <small>Hellstorm Mace / Stormcaller Gauntletsは計算可能な範囲を自動反映。倍率未公開効果は表示のみ。</small>
+ </div>
+ <div class="card"><h2>Burn / DoT</h2>
+  <div class="grid2">
+   <div><label>基準Burn 1 tick</label><input id="burntick" type="number" value="0"></div>
+   <div><label>Burn uptime %</label><input id="burnup" type="number" min="0" max="100" value="0"></div>
+  </div>
+  <small>Festering Gauntlets選択時は基準tickへDoT +80%を適用。基準tickはFesteringなしの値を入力してください。</small>
+ </div>
+</section>
+<section id="p-result" class="page">
+ <div class="card"><h2>計算データ状態</h2>
+<small><b>検証済み/今回追加:</b> 基本ダメージ式、Crit 85%上限、Crit Damage初期150%、Vulnerable×1.3、Fire Ball、Ice Shards、Electrocute、Flame Lightning、Flame Breath、Lightning Storm、Ice Nova、Ice Block、Fire Meteor、Lightning Cloud、Paragon、主要Talent、Rune Set 2pc、Damage-vs加算bucket、DoTの攻撃種別補正なし、Staff of the Frostwyrm、Stormcaller/Festering Gauntlets。</small>
+<small style="margin-top:6px"><b>実測入力対応:</b> Ice Meteorは3秒field・65%+2%/Lv、Frost Beamは3秒channel・60%+2%/Lv、Fire Elementalは80%+3%/Lvまで確定。tick/攻撃回数のみ実測入力できます。Flame Auraは5秒間Crit率+10%、Crit Damage +50%+2%/Lvの平均uptimeバフとして反映。</small>
+</div><div class="card"><h2>比較結果</h2><div id="detail"></div></div>
+ <div class="card"><h2>ホーム画面アプリ</h2>
+<button id="installBtn" style="width:100%;display:none" onclick="installPWA()">アプリとしてインストール</button>
+<small id="installHelp">iPhone: Safariの共有 →「ホーム画面に追加」。Android/Chrome: メニュー →「アプリをインストール」または「ホーム画面に追加」。PWA機能はHTTPS/対応Webサーバー上で開いた場合に有効です。</small>
+</div><div class="card"><h2>データ移行</h2>
+<div class="actions"><button onclick="exportData()">JSONを書き出す</button><button class="secondary" onclick="E('importFile').click()">JSONを読み込む</button></div>
+<input id="importFile" type="file" accept=".json,application/json" style="display:none" onchange="importData(event)">
+<small style="margin-top:8px">機種変更やPCとの受け渡し用。装備・各入力値を1ファイルへ保存します。</small></div>
+<div class="card"><h2>保存</h2>
+  <div class="actions"><button onclick="saveLocal()">端末に保存</button><button class="secondary" onclick="resetAll()">初期化</button></div>
+  <small style="margin-top:8px">入力値はこのブラウザのlocalStorageに保存します。サーバー送信はありません。</small>
+ </div>
+</section>
+</main>
+<nav class="tabs">
+<button class="active" onclick="tab('equipment',this)">Gear</button>
+<button onclick="tab('build',this)">基礎</button>
+<button onclick="tab('skills',this)">Skills</button>
+<button onclick="tab('combat',this)">戦闘</button>
+<button onclick="tab('advanced',this)">強化</button><button onclick="tab('result',this)">比較</button>
+</nav>
+<script>
+const slots=["Weapon","Helm","Chest Armor","Shoulder","Gloves","Belt","Pants","Boots","Necklace","Ring 1","Ring 2","Back"];let gear={};
+const affixDefs=[["none","— None —"],["all","All Damage %"],["fire","Fire Damage %"],["cold","Cold Damage %"],["lightning","Lightning Damage %"],["basic","Basic Damage %"],["strong","Strong Damage %"],["special","Special Damage %"],["vsBurn","Damage vs Burned %"],["vsSlow","Damage vs Slowed %"],["vsVuln","Damage vs Vulnerable %"],["vsElite","Damage vs Elite %"],
+["vsHealthy","Damage vs Healthy %"],["vsInjured","Damage vs Injured %"],["vsDistant","Damage vs Distant %"],
+["dot","Damage Over Time %"],["int","Intelligence"],["cc","Crit Chance %"],["cd","Crit Damage %"],["asPct","Attack Speed %"],["cdr","CDR %"],["wd","Weapon Damage"]];
+const uniques=["None","Stormcaller Gauntlets","Festering Gauntlets","Unstoppable Gauntlets","Ring of the Fourth Flame","Staff of the Frostwyrm","Stormguard Necklace","Hellstorm Mace"];
+const statDefs=[
+ ["all","All Damage %"],["fire","Fire Damage %"],["cold","Cold Damage %"],["lightning","Lightning Damage %"],
+ ["basic","Basic Damage %"],["strong","Strong Damage %"],["special","Special Damage %"],
+ ["vsBurn","Damage vs Burned %"],["vsSlow","Damage vs Slowed %"]
+];
+const talentDefs=[
+ ["Arcane Insight",10,0],["Searing Edge",6,0],["Mana Flow",8,0],["Flame Ward",8,5],
+ ["Frost Mastery",10,5],["Storm Executioner",10,5],["Arcane Reservoir",8,20],
+ ["Conflagration",8,20],["Enhance Ice Shards: Damage",8,20],
+ ["Enhance Flame Breath: Crit Damage",6,15],["Storm Mastery",8,20],
+ ["Frost Alacrity",6,15],["Cataclysm",8,40],["Shattering Ice",1,60],
+ ["Elemental Fury",6,15],["Plasma Conduction",8,50],["Lingering Storm",8,50],
+ ["Arcane Momentum",1,10],["Immolation",1,10],["Ignite",1,30],["Static Charge",1,30],
+ ["Arcane Exposure",1,60],["Combustion",1,60],["Storm Conduit",1,60],
+ ["Frost Armor",8,0],["Arcane Reach",6,0],["Mana Conduit",6,5],["Mana Regeneration",6,5],
+ ["Cold Retribution",1,10],["Thunderstruck",1,10],["Deep Chill",8,15],["Electrical Shield",8,15],
+ ["Enhance Ice Meteor: Mana Cost",8,20],["Flash Freeze",1,30],
+ ["Frozen Reservoir",8,40],["Permafrost",6,40],["Frozen Renewal",5,40],["Enhance Electrocute: Mana Gain",6,40],
+ ["Flame Ward II",8,50],["Frost Beam Expansion",5,50],["Current Transfer",5,50]
+];
+const capstoneRows={
+ 10:["Arcane Momentum","Immolation","Cold Retribution","Thunderstruck"],
+ 30:["Ignite","Flash Freeze","Static Charge"],
+ 60:["Arcane Exposure","Combustion","Shattering Ice","Storm Conduit"]
+};
+const rowUnlock=[0,5,10,15,20,30,40,50,60];
+function tidx(name){return talentDefs.findIndex(x=>x[0]===name)}
+function tvn(name){let i=tidx(name);return i>=0?num("t_"+i):0}
+
+const skills={
+ "Fire Ball":["Basic","Fire",75,2.5,0,1,true],
+ "Ice Shards":["Basic","Cold",90,3,0,1,true],
+ "Electrocute":["Basic","Lightning",70,2.5,0,1,true],
+ "Flame Lightning":["Basic","Hybrid",100,3,0,1,true],
+ "Flame Breath":["Strong","Fire",180,6,1.5,1,true],
+ "Ice Meteor":["Strong","Cold",65,2,4,1,false],
+ "Lightning Storm":["Strong","Lightning",150,7.5,3,3,true],
+ "Frost Beam":["Strong","Cold",60,2,3.25,1,false],
+ "Ice Nova":["Special","Cold",10,.2,22,1,true],
+ "Fire Elemental":["Special","Fire",80,3,30,1,false],
+ "Ice Block":["Special","Cold",500,15,30,1,true],
+ "Fire Meteor":["Special","Fire",400,10,24,1,true],
+ "Flame Aura":["Special","None",0,0,21,0,false],
+ "Lightning Cloud":["Special","Lightning",50,2,24,8,true]
+};
+function E(id){return document.getElementById(id)}
+function num(id){return parseFloat(E(id)?.value)||0}
+function makeUI(){
+ E("slot").innerHTML=slots.map(s=>`<option>${s}</option>`).join(""); E("cslot").innerHTML=slots.map(s=>`<option>${s}</option>`).join("");
+ E("iunique").innerHTML=uniques.map(x=>`<option>${x}</option>`).join("");E("cunique").innerHTML=uniques.map(x=>`<option>${x}</option>`).join("");
+ let opts=affixDefs.map(([k,n])=>`<option value="${k}">${n}</option>`).join(""),ia="",ca="";
+ for(let i=0;i<5;i++){ia+=`<div class="grid2"><div><label>Affix ${i+1}</label><select id="iak${i}">${opts}</select></div><div><label>Value</label><input id="iav${i}" type="number" step=".1" value="0"></div></div>`;ca+=`<div class="grid2"><div><label>Affix ${i+1}</label><select id="cak${i}">${opts}</select></div><div><label>Value</label><input id="cav${i}" type="number" step=".1" value="0"></div></div>`}
+ E("iaff").innerHTML=ia;E("caff").innerHTML=ca;
+
+ let a='',d='';
+ statDefs.forEach(([k,n])=>{a+=`<label>${n}</label><input id="s_${k}" type="number" value="0">`;d+=`<label>${n}</label><input id="d_${k}" type="number" value="0">`});
+ E("currentStats").innerHTML=a; E("deltaStats").innerHTML=d;
+ let x=''; Object.entries(skills).forEach(([n,v],i)=>x+=`<div class="skill"><input id="e_${i}" type="checkbox"><div><b>${n}</b><small>${v[0]} • ${v[1]} • ${v[6]?"計算対応":"手動/未検証"}</small></div><input id="l_${i}" type="number" min="1" max="100" value="1"></div>`);
+ E("skills").innerHTML=x;
+ let t='<div id="talentSummary"></div>';
+ rowUnlock.forEach(row=>{
+   t+=`<details ${row<=10?"open":""}><summary><b>${row} pts row</b>${capstoneRows[row]?" • Choose 1 Capstone":""}</summary>`;
+   talentDefs.forEach(([n,m,r],i)=>{if(r===row)t+=`<label>${n}</label><input class="talentInput" data-row="${r}" data-name="${n}" id="t_${i}" type="number" min="0" max="${m}" value="0">`});
+   t+='</details>';
+ });
+ E("talents").innerHTML=t;
+ document.querySelectorAll("input,select").forEach(x=>x.addEventListener("input",calc));
+ loadLocal(); calc();
+}
+function stats(candidate=false){
+ let g=gearTotals(candidate);
+ let s={wd:num("wd")+g.wd,as:num("as")*(1+g.asPct/100),int:num("int")+g.int,cc:Math.min(85,num("cc")+g.cc),cd:num("cd")+g.cd,cdr:num("cdr")+g.cdr};
+ statDefs.forEach(([k])=>s[k]=num((candidate?"d_":"s_")+k)+(candidate?num("s_"+k):0)+(g[k]||0));
+ // Paragon values used by the desktop model
+ let maxMana=num("mana")+num("t_2")*4;
+ s.int+=num("p_int");
+ // Arcane Reservoir: 5% Max Mana -> INT per rank
+ s.int+=maxMana*(num("t_6")*.05);
+ s.cc+=num("p_cc")*.1; s.cd+=num("p_cd")*2; s.as*=1+num("p_as")*.004; s.cdr+=num("p_cdr")*.2;
+ // Gems
+ const pct=[10,15,20,25,35,50], ints=[5,10,15,20,25,30], cdrs=[1,1.5,2,2.5,3.5,5];
+ let wt=Math.max(1,Math.min(6,num("wgt")))-1, at=Math.max(1,Math.min(6,num("gat")))-1;
+ if(E("wgem").value==="Ruby")s.fire+=pct[wt]; if(E("wgem").value==="Sapphire")s.cold+=pct[wt]; if(E("wgem").value==="Topaz")s.lightning+=pct[wt];
+ s.int+=num("gam")*ints[at]; s.cdr+=num("gdi")*cdrs[at];
+ // Rune 2pc
+ if(num("rpieces")>=2){if(E("rset").value==="Infernal Covenant")s.vsBurn+=65;if(E("rset").value==="Frozen Barrage")s.vsSlow+=65;if(E("rset").value==="Stormcaller")s.lightning+=50}
+ s._uniques=g._uniques;s._sets=g._sets;return s;
+}
+function oneSkill(name,v,s){
+ let [slot,el,base,step,cd,hits]=v, idx=Object.keys(skills).indexOf(name), lv=Math.max(1,num("l_"+idx));
+ let coef=(base+step*(lv-1))/100;
+ // Flame Lightning is 50% Fire + 50% Lightning at Lv1, +1.5% each per level.
+ if(name==="Flame Lightning")coef=(50+1.5*(lv-1))/100;
+ let tint=num("t_0")*5;
+ let raw=(s.wd)*coef*(1+(s.int+tint)/100)*(name==="Flame Lightning"?2:1);
+ let elem=el==="Fire"?s.fire:el==="Cold"?s.cold:el==="Lightning"?s.lightning:(s.fire+s.lightning)/2;
+ raw*=1+(s.all+elem)/100;
+ let localCC=s.cc;
+ if(slot==="Basic")localCC+=num("t_1")*2.5;
+ if(num("frozen"))localCC+=num("t_13")*50;
+ // Flame Aura: 5 sec / cooldown, average uptime; +10% CC while active
+ let auraLv=(()=>{let idx=Object.keys(skills).indexOf("Flame Aura");return Math.max(1,num("l_"+idx))})();
+ let auraUp=num("auraAuto")?Math.min(1,5/(21*Math.max(.01,1-s.cdr/100))):0;
+ localCC+=10*auraUp;
+ let extraCD=0;
+ if(name==="Flame Breath")extraCD+=num("t_9")*20;
+ if(el==="Lightning")extraCD+=num("t_10")*12;
+ extraCD+=(50+2*(auraLv-1))*auraUp;
+ raw*=1+(Math.min(.85,localCC/100)*((s.cd+extraCD)/100));
+ let type=slot==="Basic"?s.basic:slot==="Strong"?s.strong:s.special;
+ if(slot==="Basic" && num("t_17")) {
+   let specialRate=0;Object.entries(skills).forEach(([sn,sv],si)=>{if(sv[0]==="Special"&&E("e_"+si)?.checked&&sv[4]>0)specialRate+=1/(sv[4]*Math.max(.01,1-s.cdr/100))});
+   let uptime=Math.min(1,specialRate*5);type+=40*uptime;
+ }
+ raw*=1+type/100;
+ // Talent subset mirrored from desktop model
+ let tv=i=>num("t_"+i);
+ // verified talent effects
+ // Talent index: 0 Arcane Insight, 1 Searing Edge, 2 Mana Flow, 3 Flame Ward,
+ // 4 Frost Mastery, 5 Storm Executioner, 6 Arcane Reservoir, 7 Conflagration,
+ // 8 Ice Shards Damage, 9 Flame Breath Crit Damage, 10 Storm Mastery,
+ // 11 Frost Alacrity, 12 Cataclysm, 13 Shattering Ice
+ if(el==="Fire") raw*=1+tv(3)*.05;
+ if(el==="Cold") raw*=1+tv(4)*.07;
+ if(el==="Lightning") raw*=1+tv(5)*.04;
+ if(name==="Ice Shards") raw*=1+tv(8)*.10;
+ if((E("unique").value==="Stormcaller Gauntlets" || s._uniques?.includes("Stormcaller Gauntlets")) && name==="Lightning Storm"){
+   let p=Math.min(.85,s.cc/100); raw/=1+p*(s.cd/100); raw*=1+p*((s.cd+150)/100);
+ }
+ let dvs=0;
+ if(num("burned"))dvs+=s.vsBurn+num("t_7")*12;
+ if(num("slowed"))dvs+=s.vsSlow;
+ if(num("vuln"))dvs+=s.vsVuln;
+ if(num("elite"))dvs+=s.vsElite+num("t_5")*3;
+ if(num("healthy"))dvs+=s.vsHealthy;
+ if(num("injured"))dvs+=s.vsInjured;
+ if(num("distant"))dvs+=s.vsDistant;
+ raw*=1+dvs/100;
+ if(name==="Flame Lightning"){let pc=num("t_15")*.06;if(num("burned"))raw*=1+pc;raw*=1+pc*num("electro")}
+ if(num("slowed")) raw*=1+s.vsSlow/100;
+ let vup=num("vuln")?1:(num("t_21")?num("aeVulnUp")/100:0);
+ raw*=1+.30*vup;
+ if(name==="Fire Meteor")raw*=1+num("t_12")*.08;
+ let cast=raw*hits;
+ if(slot==="Basic")return cast*s.as;
+ let effcd=cd*Math.max(.01,1-s.cdr/100);
+ if(el==="Cold")effcd*=Math.max(.01,1-num("t_11")*.04);
+ if(name==="Fire Meteor")effcd*=1+num("t_12")*.05;
+ return cast/effcd;
+}
+function total(candidate=false){
+ let s=stats(candidate), total=0, rows=[], counts={Basic:0,Strong:0,Special:0};
+ Object.entries(skills).forEach(([n,v],i)=>{
+  if(E("e_"+i).checked){
+    counts[v[0]]++;
+    let d=0;
+    if(v[6]) d=oneSkill(n,v,s);
+    else if(n==="Ice Meteor" && num("iceMeteorTicks")>0) d=oneSkill(n,[v[0],v[1],v[2],v[3],v[4],num("iceMeteorTicks"),true],s);
+    else if(n==="Frost Beam" && num("frostBeamTicks")>0) d=oneSkill(n,[v[0],v[1],v[2],v[3],v[4],num("frostBeamTicks"),true],s);
+    else if(n==="Fire Elemental" && num("fireElemAttacks")>0){
+      let attacks=num("fireElemAttacks")*(1+num("t_14")*.15);
+      d=oneSkill(n,[v[0],"Fire",v[2],v[3],v[4],attacks,true],s);
+    }
+    total+=d; rows.push([n,d]);
+  }
+ });
+ let fbi=Object.keys(skills).indexOf("Fire Ball");
+ if(s._uniques?.includes("Ring of the Fourth Flame") && E("e_"+fbi)?.checked && num("pyroMult")>0){
+   let fb=oneSkill("Fire Ball",skills["Fire Ball"],s);
+   let extra=fb*.25*(num("pyroMult")-1);total+=extra;rows.push(["Fourth Flame Pyroblast Δ",extra]);
+ }
+ let ei=Object.keys(skills).indexOf("Electrocute");
+ if(num("t_23") && E("e_"+ei)?.checked){
+   let lsv=skills["Lightning Storm"], normalDps=oneSkill("Lightning Storm",lsv,s);
+   let lsCd=lsv[4]*Math.max(.01,1-s.cdr/100);
+   let procCast=normalDps*lsCd;
+   let pd=procCast*s.as*.20; total+=pd;rows.push(["Storm Conduit",pd]);
+ }
+ if((E("unique").value==="Hellstorm Mace" || s._uniques?.includes("Hellstorm Mace")) && counts.Basic===1){
+   let proc=(s.wd*10*(1+s.int/100))*(1+(s.all+s.lightning)/100)*(1+Math.min(.85,s.cc/100)*(s.cd/100));
+   let hd=proc*s.as/10; total+=hd; rows.push(["Hellstorm Mace",hd]);
+ }
+ let burn=num("burntick")*2*(num("burnup")/100);
+ if((E("unique").value==="Festering Gauntlets" || s._uniques?.includes("Festering Gauntlets")))burn*=1.8;
+ if(burn>0){total+=burn;rows.push(["Burn / DoT",burn])}
+ return {total,rows,counts};
+}
+function validateTalents(){
+ if(!E("talentSummary"))return true;
+ let total=0,byRow={};talentDefs.forEach(([n,m,r],i)=>{let v=Math.max(0,Math.min(m,num("t_"+i)));total+=v;byRow[r]=(byRow[r]||0)+v});
+ let errors=[],prior=0;
+ rowUnlock.forEach(row=>{
+   if(row>0){
+     let need=row;
+     if((prior||0)<need && (byRow[row]||0)>0)errors.push(`${row}pt段は、それ以前に${need}pt必要`);
+   }
+   prior+=(byRow[row]||0);
+ });
+ Object.entries(capstoneRows).forEach(([row,names])=>{
+   let picked=names.filter(n=>tvn(n)>0);if(picked.length>1)errors.push(`${row}pt Capstoneは1つだけ`);
+ });
+ if(total>70)errors.push(`Talent合計 ${total}/70 — 70pt超過`);
+ let ok=!errors.length;
+ E("talentSummary").innerHTML=`<div class="metric" style="margin-bottom:10px"><b>Talent Points</b><strong class="${total>70?'neg':''}">${total} / 70</strong><small>${ok?'構成条件OK':errors.join(" / ")}</small></div>`;
+ return ok;
+}
+function presetCandidate(kind){
+ let vals=kind==="lightning"?[["lightning",0],["int",0],["cc",0],["cd",0],["strong",0]]:[["cc",0],["cd",0],["int",0],["all",0],["cdr",0]];
+ vals.forEach((x,i)=>{E("cak"+i).value=x[0];E("cav"+i).value=x[1]});calc()
+}
+function calc(){ validateTalents();
+ let a=total(false),b=total(true), valid=a.counts.Basic===1&&a.counts.Strong===1&&a.counts.Special<=2;
+ let en=Math.max(2,num("enemies")), af=a.total+num("aoe")*(en-1), bf=b.total+(num("aoe")+num("aoed"))*(en-1);
+ function setFarmBonus(candidate,base){
+   let s=stats(candidate),bonus=0, icei=Object.keys(skills).indexOf("Ice Shards"),lsi=Object.keys(skills).indexOf("Lightning Storm");
+   if(s._sets?.["Frozen Barrage"]>=6 && E("e_"+icei)?.checked) bonus+=oneSkill("Ice Shards",skills["Ice Shards"],s)*3*(num("fb6hit")/100);
+   if(s._uniques?.includes("Staff of the Frostwyrm") && E("e_"+icei)?.checked && en>1) bonus+=oneSkill("Ice Shards",skills["Ice Shards"],s);
+   if(s._sets?.["Stormcaller"]>=4 && E("e_"+lsi)?.checked) bonus+=oneSkill("Lightning Storm",skills["Lightning Storm"],s)*num("sc4extra");
+   if(s._sets?.["Stormcaller"]>=6 && E("e_"+lsi)?.checked) bonus+=num("sc6dps")*en;
+   if(num("t_22") && num("burnKills")>0){
+     let exp=(s.wd)*(1+s.int/100)*(1+s.all/100)*(1+Math.min(.85,s.cc/100)*(s.cd/100));
+     bonus+=exp*.5*num("burnKills");
+   }
+   return bonus;
+ }
+ af+=setFarmBonus(false,a);bf+=setFarmBonus(true,b);
+ let pb=a.total?((b.total/a.total-1)*100):0,pf=af?((bf/af-1)*100):0;
+ E("boss").innerHTML=`${Math.round(a.total).toLocaleString()} → ${Math.round(b.total).toLocaleString()} <span class="${pb>=0?'pos':'neg'}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>`;
+ E("farm").innerHTML=`${Math.round(af).toLocaleString()} → ${Math.round(bf).toLocaleString()} <span class="${pf>=0?'pos':'neg'}">${pf>=0?'+':''}${pf.toFixed(2)}%</span>`;
+ let verdict=!valid?"⚠ Loadout: Basic 1 / Strong 1 / Special 最大2にしてください":pb>0&&pf>0?"候補装備はBOSS・周回ともDPS上昇":pb>0?"候補装備はBOSS向け":pf>0?"候補装備は周回向け":pb<0&&pf<0?"現在装備がBOSS・周回とも優位":"ほぼ同等";
+ E("verdict").textContent=verdict;
+ E("detail").innerHTML=`<p class="result"><b>BOSS</b><br>現在 ${a.total.toFixed(1)} DPS<br>候補 ${b.total.toFixed(1)} DPS<br>差 ${pb>=0?'+':''}${pb.toFixed(2)}%</p><p class="result"><b>周回 ${en}体</b><br>現在 ${af.toFixed(1)}<br>候補 ${bf.toFixed(1)}<br>差 ${pf>=0?'+':''}${pf.toFixed(2)}%</p>`+a.rows.map((r,i)=>`<small>${r[0]}: ${r[1].toFixed(1)} → ${(b.rows[i]?.[1]||0).toFixed(1)}</small>`).join("");
+ if(E("gearQuick"))E("gearQuick").innerHTML=`<div class="grid2"><div class="metric"><b>BOSS</b><strong class="${pb>=0?'pos':'neg'}">${pb>=0?'+':''}${pb.toFixed(2)}%</strong></div><div class="metric"><b>周回</b><strong class="${pf>=0?'pos':'neg'}">${pf>=0?'+':''}${pf.toFixed(2)}%</strong></div></div>`;
+}
+function tab(n,b){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));E("p-"+n).classList.add("active");document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}
+function blankItem(){return {name:"",set:"None",gem:"None",gemTier:1,unique:"None",affixes:Array.from({length:5},()=>["none",0])}}
+function readItem(p,n){let o={name:E(n).value,set:E(p+"set").value,gem:E(p+"gem").value,gemTier:num(p+"gt"),unique:E(p+"unique").value,affixes:[]};for(let i=0;i<5;i++)o.affixes.push([E(p+"ak"+i).value,num(p+"av"+i)]);return o}
+function normalize(o){if(!o)return blankItem();if(o.affixes)return o;let n=blankItem(),a=[];n.name=o.name||"";affixDefs.forEach(([k])=>{if(k!="none"&&Number(o[k]||0))a.push([k,Number(o[k])])});n.affixes=Array.from({length:5},(_,i)=>a[i]||["none",0]);return n}
+function loadSlot(){let o=normalize(gear[E("slot").value]);E("iname").value=o.name||"";E("iset").value=o.set||"None";E("igem").value=o.gem||"None";E("igt").value=o.gemTier||1;E("iunique").value=o.unique||"None";for(let i=0;i<5;i++){E("iak"+i).value=o.affixes[i]?.[0]||"none";E("iav"+i).value=o.affixes[i]?.[1]||0}}
+function saveSlot(){gear[E("slot").value]=readItem("i","iname");localStorage.setItem("deskrawl_sorc_gear",JSON.stringify(gear));refreshGear();calc()}
+function clearSlot(){delete gear[E("slot").value];localStorage.setItem("deskrawl_sorc_gear",JSON.stringify(gear));loadSlot();refreshGear();calc()}
+function refreshGear(){if(!E("gearList"))return;E("gearList").innerHTML=slots.map(s=>{let o=gear[s];return `<small><b>${s}</b> — ${o?.name||"未登録"}${o?`<br>${o.set||"None"} • ${o.gem||"None"} • ${o.unique||"None"}`:""}</small><br>`}).join("")}
+function gearTotals(candidate=false){let t={all:0,fire:0,cold:0,lightning:0,basic:0,strong:0,special:0,vsBurn:0,vsSlow:0,vsVuln:0,vsElite:0,vsHealthy:0,vsInjured:0,vsDistant:0,dot:0,int:0,cc:0,cd:0,asPct:0,cdr:0,wd:0},sets={"Infernal Covenant":0,"Frozen Barrage":0,"Stormcaller":0},us=[];let repl=E("cslot").value,cand=candidate?readItem("c","cname"):null;const gp=[10,15,20,25,35,50],gi=[5,10,15,20,25,30],gc=[1,1.5,2,2.5,3.5,5];
+slots.forEach(s=>{let o=normalize(candidate&&s===repl?cand:gear[s]);if(o.set!="None")sets[o.set]++;if(o.unique!="None")us.push(o.unique);o.affixes.forEach(([k,v])=>{if(k in t)t[k]+=Number(v||0)});let x=Math.max(0,Math.min(5,(o.gemTier||1)-1));if(s==="Weapon"){if(o.gem==="Ruby")t.fire+=gp[x];if(o.gem==="Sapphire")t.cold+=gp[x];if(o.gem==="Topaz")t.lightning+=gp[x]}if(["Helm","Chest Armor","Pants"].includes(s)){if(o.gem==="Amethyst")t.int+=gi[x];if(o.gem==="Diamond")t.cdr+=gc[x]}})
+if(sets["Infernal Covenant"]>=2)t.vsBurn+=65;if(sets["Frozen Barrage"]>=2)t.vsSlow+=65;if(sets["Stormcaller"]>=2)t.lightning+=50;t._sets=sets;t._uniques=us;return t}
+let shotScale=1;
+function showShot(ev){let f=ev.target.files?.[0];if(!f)return;let r=new FileReader();r.onload=()=>{E("shotImg").src=r.result;E("shotWrap").style.display="block";shotScale=1;E("shotImg").style.transform="scale(1)";E("shotImg").style.transformOrigin="top center"};r.readAsDataURL(f)}
+function zoomShot(x){shotScale=Math.max(.5,Math.min(3,shotScale*x));E("shotImg").style.transform=`scale(${shotScale})`;E("shotWrap").style.overflow="auto"}
+function clearShot(){E("shot").value="";E("shotImg").src="";E("shotWrap").style.display="none"}
+function fillCandidate(o){o=normalize(o);E("cname").value=o.name||"";E("cset").value=o.set||"None";E("cgem").value=o.gem||"None";E("cgt").value=o.gemTier||1;E("cunique").value=o.unique||"None";for(let i=0;i<5;i++){E("cak"+i).value=o.affixes[i]?.[0]||"none";E("cav"+i).value=o.affixes[i]?.[1]||0}calc()}
+function copyCurrentToCandidate(){fillCandidate(gear[E("cslot").value]||blankItem())}
+function clearCandidate(){fillCandidate(blankItem())}
+const ocrAliases=[
+ ["cc",["critical hit chance","critical chance","crit chance","クリティカル率","会心率"]],
+ ["cd",["critical hit damage","critical damage","crit damage","クリティカルダメージ","会心ダメージ"]],
+ ["lightning",["lightning damage","雷ダメージ","lightning dmg"]],
+ ["fire",["fire damage","火ダメージ","fire dmg"]],
+ ["cold",["cold damage","氷ダメージ","cold dmg","frost damage"]],
+ ["all",["all damage","damage bonus","全ダメージ"]],
+ ["basic",["basic damage","basic ability damage","基本攻撃ダメージ"]],
+ ["strong",["strong damage","strong ability damage","強攻撃ダメージ"]],
+ ["special",["special damage","special ability damage","特殊攻撃ダメージ"]],
+ ["int",["intelligence","int","知力"]],
+ ["asPct",["attack speed","攻撃速度"]],
+ ["cdr",["cooldown reduction","cooldown","cdr","クールダウン短縮"]],
+ ["vsBurn",["damage vs burned","damage to burning","burned damage","燃焼中"]],
+ ["vsSlow",["damage vs slowed","damage to slowed","slowed damage","減速中"]],
+ ["wd",["weapon damage","武器ダメージ"]]
+];
+let parsedOCR=[];
+function parseOCR(){
+ let lines=E("ocrText").value.split(/\n+/).map(x=>x.trim()).filter(Boolean), found=[];
+ lines.forEach(line=>{
+   let low=line.toLowerCase(),best=null;
+   ocrAliases.forEach(([key,names])=>names.forEach(n=>{if(low.includes(n.toLowerCase())&&(!best||n.length>best[2]))best=[key,line,n.length]}));
+   if(best){
+     let nums=line.match(/[-+]?\d+(?:[.,]\d+)?/g);
+     if(nums?.length){let v=parseFloat(nums[nums.length-1].replace(",","."));if(Number.isFinite(v))found.push({key:best[0],value:Math.abs(v),source:line})}
+   }
+ });
+ parsedOCR=found.slice(0,12);renderOCR();
+}
+function affixLabel(k){return affixDefs.find(x=>x[0]===k)?.[1]||k}
+function renderOCR(){
+ let box=E("ocrCandidates");
+ if(!parsedOCR.length){box.innerHTML="";E("ocrStatus").innerHTML="<small>認識できる攻撃系Affixが見つかりませんでした。テキストを修正して再解析できます。</small>";return}
+ E("ocrStatus").innerHTML=`<small>${parsedOCR.length}件の候補を検出。チェックした項目だけ候補装備へ入ります。</small>`;
+ box.innerHTML=parsedOCR.map((x,i)=>`<div class="ocrrow"><input id="oc_${i}" type="checkbox" checked><div><b>${affixLabel(x.key)}</b><small>${escapeHtml(x.source)}</small></div><input id="ov_${i}" type="number" step=".1" value="${x.value}"></div>`).join("")+
+ `<button style="width:100%;margin-top:10px" onclick="applyOCR()">チェック項目を候補装備へ反映</button>`;
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function applyOCR(){
+ let selected=parsedOCR.map((x,i)=>({key:x.key,value:num("ov_"+i),on:E("oc_"+i)?.checked})).filter(x=>x.on);
+ for(let i=0;i<5;i++){E("cak"+i).value="none";E("cav"+i).value=0}
+ selected.slice(0,5).forEach((x,i)=>{E("cak"+i).value=x.key;E("cav"+i).value=x.value});
+ calc();E("ocrStatus").innerHTML=`<small>${Math.min(5,selected.length)}件を候補装備へ反映しました。数値を確認してから比較結果を使用してください。</small>`;
+}
+async function tryNativeOCR(){
+ if(!E("shotImg").src){E("ocrStatus").innerHTML="<small>先にスクリーンショットを選択してください。</small>";return}
+ if(!("TextDetector" in window)){E("ocrStatus").innerHTML="<small>このブラウザは端末内TextDetector OCRに対応していません。画像を見ながら入力するか、端末の文字認識でコピーしたテキストを貼り付けてください。</small>";return}
+ try{
+   E("ocrStatus").innerHTML="<small>端末内で文字認識中…</small>";
+   let det=new TextDetector(), bmp=await createImageBitmap(await (await fetch(E("shotImg").src)).blob()), blocks=await det.detect(bmp);
+   E("ocrText").value=blocks.map(b=>b.rawValue).join("\n");parseOCR();
+ }catch(err){E("ocrStatus").innerHTML="<small>端末OCRを実行できませんでした。テキスト貼り付け方式を利用してください。</small>"}
+}
+function collectInputs(){let o={};document.querySelectorAll("input,select").forEach(x=>{if(!x.id||x.type==="file")return;o[x.id]=x.type==="checkbox"?x.checked:x.value});return o}
+function exportData(){let data={version:"mobile-0.5.0",gear:gear,inputs:collectInputs()};let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="deskrawl_sorcerer_build.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importData(ev){let f=ev.target.files?.[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);gear=d.gear||{};Object.entries(d.inputs||{}).forEach(([k,v])=>{let x=E(k);if(x)x.type==="checkbox"?x.checked=v:x.value=v});localStorage.setItem("deskrawl_sorc_gear",JSON.stringify(gear));refreshGear();loadSlot();calc();E("verdict").textContent="JSONを読み込みました"}catch(e){alert("JSONを読み込めませんでした")}};r.readAsText(f)}
+function saveLocal(){localStorage.setItem("deskrawl_sorc_gear",JSON.stringify(gear));let o={};document.querySelectorAll("input,select").forEach(x=>o[x.id]=x.type==="checkbox"?x.checked:x.value);localStorage.setItem("deskrawl_sorc_mobile",JSON.stringify(o));E("verdict").textContent="端末に保存しました"}
+function loadLocal(){try{
+ let gg=JSON.parse(localStorage.getItem("deskrawl_sorc_gear")||"{}"); gear=gg||{};
+ let o=JSON.parse(localStorage.getItem("deskrawl_sorc_mobile")||"{}");Object.entries(o).forEach(([k,v])=>{let x=E(k);if(x)x.type==="checkbox"?x.checked=v:x.value=v})}catch(e){} refreshGear(); loadSlot();}
+function resetAll(){if(confirm("入力値を初期化しますか？")){localStorage.removeItem("deskrawl_sorc_mobile");localStorage.removeItem("deskrawl_sorc_gear");location.reload()}}
+let deferredInstall=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;if(E("installBtn"))E("installBtn").style.display="block"});
+async function installPWA(){if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;if(E("installBtn"))E("installBtn").style.display="none"}
+if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+makeUI();
+</script>
+</body></html>

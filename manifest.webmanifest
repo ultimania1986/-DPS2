@@ -1,0 +1,9 @@
+{
+  "name": "Deskrawl Sorcerer DPS Lab",
+  "short_name": "Deskrawl DPS",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#111318",
+  "description": "Deskrawl Sorcerer equipment and DPS comparison tool"
+}
