@@ -30,7 +30,7 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
 </head>
 <body>
 <header>
-<h1>Deskrawl • Sorcerer DPS Lab <small>Mobile v1.1</small></h1>
+<h1>Deskrawl • Sorcerer DPS Lab <small>Mobile v1.2</small></h1>
 <div class="summary">
  <div class="metric"><b>BOSS</b><strong id="boss">—</strong></div>
  <div class="metric"><b>周回</b><strong id="farm">—</strong></div>
@@ -41,12 +41,12 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
 <section id="p-build" class="page">
  <div class="card"><h2>キャラクター基礎値</h2>
   <div class="grid2">
-   <div><label>Weapon Damage</label><input id="wd" type="number" value="100"></div>
-   <div><label>Attack Speed / sec</label><input id="as" type="number" step=".01" value="1"></div>
-   <div><label>Intelligence</label><input id="int" type="number" value="10"></div>
-   <div><label>Crit Chance %</label><input id="cc" type="number" value="5"></div>
-   <div><label>Crit Damage %</label><input id="cd" type="number" value="150"></div>
-   <div><label>Cooldown Reduction %</label><input id="cdr" type="number" value="0"></div><div><label>Max Mana</label><input id="mana" type="number" value="100"></div>
+   <div><label>武器ダメージ</label><input id="wd" type="number" value="100"></div>
+   <div><label>攻撃速度 / 秒</label><input id="as" type="number" step=".01" value="1"></div>
+   <div><label>知力 (INT)</label><input id="int" type="number" value="10"></div>
+   <div><label>クリティカル率 %</label><input id="cc" type="number" value="5"></div>
+   <div><label>クリティカルダメージ %</label><input id="cd" type="number" value="150"></div>
+   <div><label>クールダウン短縮 (CDR) %</label><input id="cdr" type="number" value="0"></div><div><label>最大マナ</label><input id="mana" type="number" value="100"></div>
   </div>
  </div>
  <div class="card"><h2>現在装備の攻撃補正</h2><div id="currentStats"></div></div>
@@ -59,14 +59,14 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
 
 <section id="p-equipment" class="page active">
 <div class="card"><h2>現在装備 12部位</h2><label>部位</label><select id="slot" onchange="loadSlot()"></select><label>装備名</label><input id="iname">
-<label>Rune Set</label><select id="iset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
-<div class="grid2"><div><label>Gem</label><select id="igem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="igt" type="number" min="1" max="6" value="1"></div></div>
-<label>Unique</label><select id="iunique"></select><h2 style="margin-top:16px">Affix ×5</h2><div id="iaff"></div>
+<label>ルーンセット</label><select id="iset"><option>なし</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+<div class="grid2"><div><label>Gem</label><select id="igem"><option>なし</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="igt" type="number" min="1" max="6" value="1"></div></div>
+<label>ユニーク</label><select id="iunique"></select><h2 style="margin-top:16px">Affix ×5</h2><div id="iaff"></div>
 <div class="actions" style="margin-top:12px"><button onclick="saveSlot()">この部位を登録</button><button class="secondary" onclick="clearSlot()">クリア</button></div></div>
 <div class="card"><h2>拾った交換候補</h2><label>交換部位</label><select id="cslot" onchange="calc()"></select><label>装備名</label><input id="cname">
-<label>Rune Set</label><select id="cset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
-<div class="grid2"><div><label>Gem</label><select id="cgem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="cgt" type="number" min="1" max="6" value="1"></div></div>
-<label>Unique</label><select id="cunique"></select><h2 style="margin-top:16px">Affix ×5</h2>
+<label>ルーンセット</label><select id="cset"><option>なし</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+<div class="grid2"><div><label>Gem</label><select id="cgem"><option>なし</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option><option>Amethyst</option><option>Diamond</option></select></div><div><label>Tier</label><input id="cgt" type="number" min="1" max="6" value="1"></div></div>
+<label>ユニーク</label><select id="cunique"></select><h2 style="margin-top:16px">Affix ×5</h2>
 <div class="actions"><button class="secondary" onclick="presetCandidate('lightning')">Lightning系</button><button class="secondary" onclick="presetCandidate('crit')">Crit系</button></div>
 <div id="caff"></div>
 <div class="actions" style="margin-top:10px"><button class="secondary" onclick="copyCurrentToCandidate()">現在装備をコピー</button><button class="secondary" onclick="clearCandidate()">候補をクリア</button></div>
@@ -98,14 +98,14 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
  <div class="card"><h2>戦闘条件</h2>
   <div class="grid2">
    <div><label>周回時の敵数</label><input id="enemies" type="number" min="2" max="20" value="5"></div>
-   <div><label>Vulnerable</label><select id="vuln"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Arcane Exposure Vulnerable uptime %</label><input id="aeVulnUp" type="number" min="0" max="100" value="0"></div>
-   <div><label>Burned</label><select id="burned"><option value="0">OFF</option><option value="1">ON</option></select></div>
-   <div><label>Slowed</label><select id="slowed"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Frozen</label><select id="frozen"><option value="0">OFF</option><option value="1">ON</option></select></div>
-<div><label>Elite</label><select id="elite"><option value="0">OFF</option><option value="1">ON</option></select></div><div><label>Healthy target</label><select id="healthy"><option value="0">OFF</option><option value="1">ON</option></select></div>
-<div><label>Injured target</label><select id="injured"><option value="0">OFF</option><option value="1">ON</option></select></div>
-<div><label>Distant target</label><select id="distant"><option value="0">OFF</option><option value="1">ON</option></select></div>
-<div><label>Electrostatic stacks</label><input id="electro" type="number" min="0" max="20" value="0"></div>
-<div><label>Flame Aura uptime</label><select id="auraAuto"><option value="1">自動平均</option><option value="0">無視</option></select></div>
+   <div><label>脆弱</label><select id="vuln"><option value="0">オフ</option><option value="1">オン</option></select></div><div><label>Arcane Exposure Vulnerable uptime %</label><input id="aeVulnUp" type="number" min="0" max="100" value="0"></div>
+   <div><label>燃焼</label><select id="burned"><option value="0">オフ</option><option value="1">オン</option></select></div>
+   <div><label>減速</label><select id="slowed"><option value="0">オフ</option><option value="1">オン</option></select></div><div><label>凍結</label><select id="frozen"><option value="0">オフ</option><option value="1">オン</option></select></div>
+<div><label>エリート</label><select id="elite"><option value="0">オフ</option><option value="1">オン</option></select></div><div><label>健全状態</label><select id="healthy"><option value="0">オフ</option><option value="1">オン</option></select></div>
+<div><label>負傷状態</label><select id="injured"><option value="0">オフ</option><option value="1">オン</option></select></div>
+<div><label>遠距離</label><select id="distant"><option value="0">オフ</option><option value="1">オン</option></select></div>
+<div><label>静電気スタック</label><input id="electro" type="number" min="0" max="20" value="0"></div>
+<div><label>フレイムオーラ稼働率</label><select id="auraAuto"><option value="1">自動平均</option><option value="0">無視</option></select></div>
   </div>
  </div>
  <div class="card"><h2>未公開cadenceの実測補助</h2>
@@ -138,14 +138,14 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
    <div><label>CDR points</label><input id="p_cdr" type="number" min="0" max="50" value="0"></div>
   </div>
  </div>
- <div class="card"><h2>Rune Set</h2>
-  <label>Set</label><select id="rset"><option>None</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
+ <div class="card"><h2>ルーンセット</h2>
+  <label>Set</label><select id="rset"><option>なし</option><option>Infernal Covenant</option><option>Frozen Barrage</option><option>Stormcaller</option></select>
   <label>装備数</label><input id="rpieces" type="number" min="0" max="6" value="0">
   <small>2pcの確定攻撃補正を自動反映。4/6pcの係数未確定部分は推測で加算しません。</small>
  </div>
  <div class="card"><h2>Gems</h2>
   <div class="grid2">
-   <div><label>Weapon Gem</label><select id="wgem"><option>None</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option></select></div>
+   <div><label>Weapon Gem</label><select id="wgem"><option>なし</option><option>Ruby</option><option>Sapphire</option><option>Topaz</option></select></div>
    <div><label>Tier</label><input id="wgt" type="number" min="1" max="6" value="1"></div>
    <div><label>Armor Amethyst 数</label><input id="gam" type="number" min="0" max="3" value="0"></div>
    <div><label>Armor Diamond 数</label><input id="gdi" type="number" min="0" max="3" value="0"></div>
@@ -157,7 +157,7 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
   <small>全41 Talentを収録。0/5/10/15/20/30/40/50/60pt段の解放条件と、10/30/60pt Capstoneの排他を自動チェックします。防御・Mana・CC系などDPSへ直接影響しないTalentもビルド保存対象です。</small>
  </div>
  <div class="card"><h2>Legendary / Unique</h2>
-  <label>装備効果</label><select id="unique"><option>None</option><option>Stormcaller Gauntlets</option><option>Festering Gauntlets</option><option>Hellstorm Mace</option><option>Staff of the Frostwyrm</option><option>Ring of the Fourth Flame</option><option>Stormguard Necklace</option></select>
+  <label>装備効果</label><select id="unique"><option>なし</option><option>Stormcaller Gauntlets</option><option>Festering Gauntlets</option><option>Hellstorm Mace</option><option>Staff of the Frostwyrm</option><option>Ring of the Fourth Flame</option><option>Stormguard Necklace</option></select>
   <small>Hellstorm Mace / Stormcaller Gauntletsは計算可能な範囲を自動反映。倍率未公開効果は表示のみ。</small>
  </div>
  <div class="card"><h2>Burn / DoT</h2>
@@ -195,14 +195,14 @@ small{color:var(--muted);line-height:1.45;display:block}.tabs{position:fixed;bot
 </nav>
 <script>
 const slots=["Weapon","Helm","Chest Armor","Shoulder","Gloves","Belt","Pants","Boots","Necklace","Ring 1","Ring 2","Back"];let gear={};
-const affixDefs=[["none","— None —"],["all","All Damage %"],["fire","Fire Damage %"],["cold","Cold Damage %"],["lightning","Lightning Damage %"],["basic","Basic Damage %"],["strong","Strong Damage %"],["special","Special Damage %"],["vsBurn","Damage vs Burned %"],["vsSlow","Damage vs Slowed %"],["vsVuln","Damage vs Vulnerable %"],["vsElite","Damage vs Elite %"],
-["vsHealthy","Damage vs Healthy %"],["vsInjured","Damage vs Injured %"],["vsDistant","Damage vs Distant %"],
-["dot","Damage Over Time %"],["int","Intelligence"],["cc","Crit Chance %"],["cd","Crit Damage %"],["asPct","Attack Speed %"],["cdr","CDR %"],["wd","Weapon Damage"]];
+const affixDefs=[["none","— None —"],["all","全ダメージ %"],["fire","火炎ダメージ %"],["cold","冷気ダメージ %"],["lightning","雷ダメージ %"],["basic","基本スキルダメージ %"],["strong","強力スキルダメージ %"],["special","特殊スキルダメージ %"],["vsBurn","燃焼中の敵へのダメージ %"],["vsSlow","減速中の敵へのダメージ %"],["vsVuln","脆弱状態の敵へのダメージ %"],["vsElite","エリートへのダメージ %"],
+["vsHealthy","健全状態の敵へのダメージ %"],["vsInjured","負傷状態の敵へのダメージ %"],["vsDistant","遠距離の敵へのダメージ %"],
+["dot","継続ダメージ (DoT) %"],["int","知力 (INT)"],["cc","クリティカル率 %"],["cd","クリティカルダメージ %"],["asPct","攻撃速度 %"],["cdr","クールダウン短縮 (CDR) %"],["wd","武器ダメージ"]];
 const uniques=["None","Stormcaller Gauntlets","Festering Gauntlets","Unstoppable Gauntlets","Ring of the Fourth Flame","Staff of the Frostwyrm","Stormguard Necklace","Hellstorm Mace"];
 const statDefs=[
- ["all","All Damage %"],["fire","Fire Damage %"],["cold","Cold Damage %"],["lightning","Lightning Damage %"],
- ["basic","Basic Damage %"],["strong","Strong Damage %"],["special","Special Damage %"],
- ["vsBurn","Damage vs Burned %"],["vsSlow","Damage vs Slowed %"]
+ ["all","全ダメージ %"],["fire","火炎ダメージ %"],["cold","冷気ダメージ %"],["lightning","雷ダメージ %"],
+ ["basic","基本スキルダメージ %"],["strong","強力スキルダメージ %"],["special","特殊スキルダメージ %"],
+ ["vsBurn","燃焼中の敵へのダメージ %"],["vsSlow","減速中の敵へのダメージ %"]
 ];
 const talentDefs=[
  ["Arcane Insight",10,0],["Searing Edge",6,0],["Mana Flow",8,0],["Flame Ward",8,5],
